@@ -207,6 +207,46 @@ st.markdown("""
         font-weight: 700 !important;
         font-size: 1.25rem !important; 
     }
+    
+    /* מרכוז כותרות פנימיות וטקסטים בכרטיסייה 3 */
+    .center-header-block {
+        text-align: center !important;
+        margin: 20px auto 10px auto;
+        width: 100%;
+        direction: rtl !important;
+    }
+    .center-header-block h2, .center-header-block h3 {
+        color: #ffffff !important;
+        text-align: center !important;
+        font-weight: 800 !important;
+    }
+    .center-header-block p {
+        color: #94a3b8 !important;
+        text-align: center !important;
+        font-size: 1.1rem;
+        margin-bottom: 25px;
+    }
+    
+    /* עיצוב המכולות של אזורי החיפוש */
+    .search-section {
+        background: rgba(11, 17, 30, 0.85) !important;
+        border: 1px solid rgba(255, 255, 255, 0.07) !important;
+        border-radius: 16px !important;
+        padding: 35px !important;
+        margin-top: 15px !important;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+    }
+
+    /* תיבת תוצאות */
+    .result-box {
+        background-color: #0f172a; 
+        padding: 25px; 
+        border-radius: 12px; 
+        border: 1px solid #1e293b; 
+        margin-top: 25px;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -309,6 +349,8 @@ with tab1:
             final_short = []
             
             for s in stage1_passed:
+                tc = 0
+                tp = 0
                 try:
                     t = yf.Ticker(s['ticker'])
                     exp = t.options
@@ -373,7 +415,7 @@ with tab2:
                         close_day3 = float(df['Close'].iloc[-3])
                         if (close_day1 <= close_day3) or (close_day2 <= close_day3): continue
                         
-                        # קריטריון חדש: היסחרות מתחת לממוצע נע 9 ב-4 ימי המסחר האחרונים ברציפות
+                        # קריטריון 4: היסחרות מתחת לממוצע נע 9 ב-4 ימי המסחר האחרונים ברציפות
                         df['MA9'] = df['Close'].rolling(window=9).mean()
                         
                         under_ma9_day1 = float(df['Close'].iloc[-1]) < float(df['MA9'].iloc[-1])
@@ -395,6 +437,8 @@ with tab2:
             final_long = []
             
             for s in stage1_passed_long:
+                tc = 0
+                tp = 0
                 try:
                     t = yf.Ticker(s['ticker'])
                     exp = t.options
