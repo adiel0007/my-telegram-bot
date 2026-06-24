@@ -56,7 +56,7 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=700;900&family=Inter:wght@400;600;700&display=swap');
 
-    /* 🛠️ הסתרת סרגל הכלים של המפתחים (העלמת כיתוב dev בתחתית המסך) */
+    /* הסתרת סרגל הכלים של המפתחים (העלמת כיתוב dev בתחתית המסך) */
     footer {visibility: hidden;}
     header {visibility: hidden;}
     div[data-testid="stStatusWidget"] {display: none !important;}
@@ -201,7 +201,6 @@ st.markdown("""
         font-size: 1.6rem;
     }
     
-    /* קומפוננטת עיגול לוגו מינימליסטי ויוקרתי במקרה ששרת הלוגואים חסום */
     .clean-fallback-logo {
         width: 42px;
         height: 42px;
@@ -247,105 +246,95 @@ with tab3:
     st.markdown('<div class="center-header-block" style="text-align:center;"><h2>🤖 ניתוח מניה ומנוע שאלות AI</h2></div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     
+    # אתחול משתנים קשיח למניעת שגיאות NameError ב-Streamlit
+    rsi_status = "RSI = 54.2 - נייטרלי"
+    ma_status = "ממוצעים נעים = המניה נסחרת מעל הממוצעים הנעים, כלומר, היא יקרה."
+    options_status = "Calls חזקים יותר (קול: 64.2% | פוט: 35.8%)"
+    earnings_status = "החברה עמדה או עקפה את רוב תחזיות ההכנסות ב-85% מהמקרים"
+    next_quarter_status = "צפי צמיחה חיובי של כ-12.5% בהתאם לקונזנזוס השוק"
+    recommendation_status = "קנייה חזקה 🔥 (כ-88% מהאנליסטים ממליצים לונג)"
+    ai_raw_data = "אנא הזן סימול מניה ולחץ על 'נתח מניה' כדי להפעיל את חוות דעת האנליסט."
+    show_results = False
+    active_ticker = ""
+
     with col1:
         st.markdown('<div class="search-section">', unsafe_allow_html=True)
         search_ticker = st.text_input("הזן סימול מניה (למשל NFLX, AAPL):", key="search_input").upper().strip()
         run_analysis = st.button("🔍 נתח מניה", key="btn_analyze")
         st.markdown('</div>', unsafe_allow_html=True)
         
-        analysis_container = st.container()
         if run_analysis and search_ticker:
-            with analysis_container:
-                
-                # --- טיימר רץ אינטראקטיבי בזמן אמת ---
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                start_time = time.time()
-                
-                for percent_complete in range(1, 101, 10):
-                    current_elapsed = time.time() - start_time
-                    status_text.markdown(f"<span style='color:#ffffff; font-weight:600;'>⏳ מנתח נתונים ומנטרל חסימות שרת... זמן זורם: {current_elapsed:.1f} שניות</span>", unsafe_allow_html=True)
-                    progress_bar.progress(percent_complete)
-                    time.sleep(0.3)
-                
-                status_text.markdown("<span style='color:#ffffff; font-weight:600;'>📊 מעבד תוצאות פיננסיות סופיות...</span>", unsafe_allow_html=True)
-                
-                # ערכי ברירת מחדל מוצקים (באחוזים וביחסים מדויקים)
-                rsi_status = "RSI = 54.2 - נייטרלי"
-                ma_status = "ממוצעים נעים = המניה נסחרת מעל הממוצעים הנעים, כלומר, היא יקרה."
-                options_status = "Calls חזקים יותר (קול: 64.2% | פוט: 35.8%)"
-                earnings_status = "החברה עמדה או עקפה את רוב תחזיות ההכנסות ב-85% מהמקרים"
-                next_quarter_status = "צפי צמיחה חיובי של כ-12.5% בהתאם לקונזנזוס השוק"
-                recommendation_status = "קנייה חזקה 🔥 (כ-88% מהאנליסטים ממליצים לונג)"
-                
-                # חילוץ קשיח ומאובטח של הלוגו ללא תקלות תצוגה
-                domain = DOMAINS_MAP.get(search_ticker, f"{search_ticker.lower()}.com")
-                logo_url = f"https://logo.clearbit.com/{domain}"
-                
-                # יצירת אלמנט הלוגו עם הגנת קריסה מובנית
-                logo_html = f"""
-                    <div style="display: flex; align-items: center; justify-content: center;">
-                        <img src="{logo_url}" width="42" style="border-radius: 50%; background: #ffffff; padding: 2px;" 
-                        onerror="this.onerror=null; this.parentClassName=''; this.outerHTML='<div class=\"clean-fallback-logo\">{search_ticker[:3]}</div>';">
-                    </div>
-                """
-                
-                # ניסיון קריאת נתוני שוק חיים במידה ואין חסימת IP
-                try:
-                    t = yf.Ticker(search_ticker)
-                    hist = t.history(period="1mo", auto_adjust=True)
-                    if not hist.empty:
-                        close_prices = hist['Close'].squeeze()
-                        last_price = float(close_prices.iloc[-1])
-                        
-                        if last_price > close_prices.rolling(window=9).mean().iloc[-1]:
-                            ma_status = "ממוצעים נעים = המניה נסחרת מעל הממוצעים הנעים, כלומר, היא יקרה."
-                        else:
-                            ma_status = "המניה נסחרת מתחת לממוצע נע 9 - המניה עדיין באזורי קנייה."
-                except:
-                    pass
-
-                # הפעלת מנוע ה-AI לניתוח הממוקד ביותר (5-7 שורות)
-                ai_prompt = (
-                    f"נתח את מניית {search_ticker}. חובה להחזיר תשובה קצרה וממוקדת באורך של 5 עד 7 שורות בלבד! "
-                    f"בשורות אלו סכם במדויק: 1) במה החברה מתעסקת. 2) האם זה זמן מתאים לקניה או מכירה לפי דעתך הפיננסית המקצועית ולמה."
-                )
-                ai_raw_data = ask_gemini(ai_prompt)
-                
-                # העלמת הבר בסיום הפעולה
-                progress_bar.empty()
-                status_text.empty()
-                
-                final_elapsed = time.time() - start_time
-                
-                # ---- תצוגת הפלט הסופית המעוצבת ----
-                st.markdown('<div class="result-box">', unsafe_allow_html=True)
-                
-                # בניית שורת כותרת גמישה: כותרת מימין, לוגו ואייקון 📊 בקצה השמאלי הקיצוני ביותר
-                st.markdown(f"""
-                    <div class="header-row-container">
-                        <div class="header-text-title">סקירת מניית {search_ticker}</div>
-                        <div class="header-left-side">
-                            {logo_html}
-                            <div class="header-emoji">📊</div>
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
+            active_ticker = search_ticker
+            # --- טיימר רץ אינטראקטיבי בזמן אמת ---
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            start_time = time.time()
+            
+            for percent_complete in range(1, 101, 10):
+                current_elapsed = time.time() - start_time
+                status_text.markdown(f"<span style='color:#ffffff; font-weight:600;'>⏳ מנתח נתונים ומנטרל חסימות שרת... זמן זורם: {current_elapsed:.1f} שניות</span>", unsafe_allow_html=True)
+                progress_bar.progress(percent_complete)
+                time.sleep(0.3)
+            
+            status_text.markdown("<span style='color:#ffffff; font-weight:600;'>📊 מעבד תוצאות פיננסיות סופיות...</span>", unsafe_allow_html=True)
+            
+            # ניסיון קריאת נתוני שוק חיים במידה ואין חסימת IP
+            try:
+                t = yf.Ticker(search_ticker)
+                hist = t.history(period="1mo", auto_adjust=True)
+                if not hist.empty:
+                    close_prices = hist['Close'].squeeze()
+                    last_price = float(close_prices.iloc[-1])
                     
-                st.markdown('<hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">', unsafe_allow_html=True)
-                st.markdown(f'<div class="metric-row"><span class="metric-label">1. מדד עוצמה יחסית (RSI):</span><span class="metric-value">{rsi_status}</span></div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="metric-row"><span class="metric-label">2. ניתוח ממוצעים נעים:</span><span class="metric-value">{ma_status}</span></div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="metric-row"><span class="metric-label">3. שוק האופציות (סנטימנט באחוזים):</span><span class="metric-value">{options_status}</span></div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="metric-row"><span class="metric-label">4. עמידה בתחזית הכנסות:</span><span class="metric-value">{earnings_status}</span></div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="metric-row"><span class="metric-label">5. צפי דוחות וצמיחה:</span><span class="metric-value">{next_quarter_status}</span></div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="metric-row"><span class="metric-label">6. המלצות אנליסטים בשוק (באחוזים):</span><span class="metric-value">{recommendation_status}</span></div>', unsafe_allow_html=True)
+                    if last_price > close_prices.rolling(window=9).mean().iloc[-1]:
+                        ma_status = "ממוצעים נעים = המניה נסחרת מעל הממוצעים הנעים, כלומר, היא יקרה."
+                    else:
+                        ma_status = "המניה נסחרת מתחת לממוצע נע 9 - המניה עדיין באזורי קנייה."
+            except:
+                pass
+
+            # הפעלת מנוע ה-AI לניתוח הממוקד ביותר (5-7 שורות)
+            ai_prompt = (
+                f"נתח את מניית {search_ticker}. חובה להחזיר תשובה קצרה וממוקדת באורך של 5 עד 7 שורות בלבד! "
+                f"בשורות אלו סכם במדויק: 1) במה החברה מתעסקת. 2) האם זה זמן מתאים לקניה או מכירה לפי דעתך הפיננסית המקצועית ולמה."
+            )
+            ai_raw_data = ask_gemini(ai_prompt)
+            
+            # העלמת הבר בסיום הפעולה
+            progress_bar.empty()
+            status_text.empty()
+            final_elapsed = time.time() - start_time
+            show_results = True
+
+        # ---- תצוגת הפלט הסופית המעוצבת והמוגנת ----
+        if show_results and active_ticker:
+            st.markdown('<div class="result-box">', unsafe_allow_html=True)
+            
+            # בניית שורת כותרת גמישה: כותרת מימין, לוגו ואייקון 📊 בקצה השמאלי הקיצוני ביותר
+            st.markdown(f"""
+                <div class="header-row-container">
+                    <div class="header-text-title">סקירת מניית {active_ticker}</div>
+                    <div class="header-left-side">
+                        <div class="clean-fallback-logo">{active_ticker[:3]}</div>
+                        <div class="header-emoji">📊</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
                 
-                st.markdown('<div style="margin-top:20px; padding:15px; background: rgba(255,255,255,0.03); border-radius:8px; border-right:4px solid #ffbc00;">', unsafe_allow_html=True)
-                st.markdown('<h4 style="color:#ffffff;">7. פעילות החברה & חוות דעת אנליסט AI (תקציר ממוקד):</h4>', unsafe_allow_html=True)
-                st.markdown(f'<p style="line-height:1.7; color:#cbd5e1; text-align:right; direction:rtl;">{ai_raw_data}</p>', unsafe_allow_html=True)
-                st.markdown('</div>')
-                st.markdown(f'<p style="color:#94a3b8; font-size:0.9rem; margin-top:15px; text-align:left;">⏱️ החיפוש והניתוח הושלמו בהצלחה בתוך {final_elapsed:.2f} שניות.</p>', unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('<hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-row"><span class="metric-label">1. מדד עוצמה יחסית (RSI):</span><span class="metric-value">{rsi_status}</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-row"><span class="metric-label">2. ניתוח ממוצעים נעים:</span><span class="metric-value">{ma_status}</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-row"><span class="metric-label">3. שוק האופציות (סנטימנט באחוזים):</span><span class="metric-value">{options_status}</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-row"><span class="metric-label">4. עמידה בתחזית הכנסות:</span><span class="metric-value">{earnings_status}</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-row"><span class="metric-label">5. צפי דוחות וצמיחה:</span><span class="metric-value">{next_quarter_status}</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-row"><span class="metric-label">6. המלצות אנליסטים בשוק (באחוזים):</span><span class="metric-value">{recommendation_status}</span></div>', unsafe_allow_html=True)
+            
+            st.markdown('<div style="margin-top:20px; padding:15px; background: rgba(255,255,255,0.03); border-radius:8px; border-right:4px solid #ffbc00;">', unsafe_allow_html=True)
+            st.markdown('<h4 style="color:#ffffff;">7. פעילות החברה & חוות דעת אנליסט AI (תקציר ממוקד):</h4>', unsafe_allow_html=True)
+            st.markdown(f'<p style="line-height:1.7; color:#cbd5e1; text-align:right; direction:rtl;">{ai_raw_data}</p>', unsafe_allow_html=True)
+            st.markdown('</div>')
+            st.markdown(f'<p style="color:#94a3b8; font-size:0.9rem; margin-top:15px; text-align:left;">⏱️ החיפוש והניתוח הושלמו בהצלחה בתוך {final_elapsed:.2f} שניות.</p>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
         st.markdown('<div class="search-section">', unsafe_allow_html=True)
