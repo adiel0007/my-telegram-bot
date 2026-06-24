@@ -74,7 +74,6 @@ st.markdown("""
         direction: rtl !important;
     }
     
-    /* פילוח עמוק של כפתורי הלשוניות להגדלת הטקסט */
     .stTabs [data-baseweb="tab"] p {
         font-size: 1.3rem !important; /* הגדלת גודל הגופן של השם של הכרטיסיות */
         font-weight: 800 !important;  /* הדגשה חזקה של הכותרת */
@@ -99,7 +98,7 @@ st.markdown("""
         color: #ffbc00 !important;
     }
 
-    /* קונטיינר מרכזי נקי */
+    /* קונטיינר מרכזי נקי לרדארים */
     .cyber-box {
         direction: rtl !important;
         text-align: center !important;
@@ -128,19 +127,20 @@ st.markdown("""
         text-align: center !important;
     }
 
-    /* עיצוב גורף ויציב לכפתורים - ממורכזים לחלוטין */
+    /* עיצוב גורף ויציב לכפתורים - צבע קבוע ויציב ללא רקע לבן */
     div.stButton {
         text-align: center !important;
         display: flex;
         justify-content: center;
-        margin-top: 15px;
+        margin-top: 20px;
+        margin-bottom: 10px;
     }
     
     div.stButton > button {
         color: #ffffff !important;
         font-weight: 700 !important;
-        font-size: 1.05rem !important;
-        padding: 12px 40px !important;
+        font-size: 1.1rem !important;
+        padding: 14px 45px !important;
         border-radius: 30px !important;
         border: none !important;
         width: auto !important;
@@ -149,7 +149,7 @@ st.markdown("""
         cursor: pointer;
     }
     
-    /* צבעי כפתורים */
+    /* סגנונות צבע לכפתורים - ביטול מוחלט של הרקע הלבן */
     .short-btn-style div.stButton > button {
         background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%) !important;
         box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4) !important;
@@ -170,20 +170,20 @@ st.markdown("""
 
     .action-btn-style div.stButton > button {
         background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3) !important;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
     }
     .action-btn-style div.stButton > button:hover {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
         transform: translateY(-2px);
     }
 
-    /* תיקון קשיח וקבוע לצבע הפונט בתוך תיבות הקלט הלבנות - שחור תמיד, מודגש וגדול */
+    /* עיצוב תיבות ההקלדה הלבנות (Inputs) */
     div[data-testid="stTextInput"] input {
-        color: #000000 !important;           /* פונט שחור קבוע ויציב */
-        -webkit-text-fill-color: #000000 !important; /* הגנה נוספת לדפדפני מובייל/כרום */
-        font-weight: 700 !important;          /* מודגש */
-        font-size: 1.15rem !important;        /* מוגדל וקריא */
-        background-color: #ffffff !important; /* שמירה על תיבה לבנה נקייה */
+        color: #000000 !important;           
+        -webkit-text-fill-color: #000000 !important; 
+        font-weight: 700 !important;          
+        font-size: 1.15rem !important;        
+        background-color: #ffffff !important; 
         border: 2px solid #cbd5e1 !important;
         border-radius: 8px !important;
         padding: 12px !important;
@@ -191,13 +191,18 @@ st.markdown("""
         text-align: right !important;
     }
     
+    /* הגדלה והדגשה משמעותית של הטקסט מעל קוביות החיפוש */
+    div[data-testid="stTextInput"] label p {
+        color: #ffffff !important;
+        font-weight: 900 !important;
+        font-size: 1.3rem !important; /* הגדלת הטקסט מעל הקוביות */
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    
     div[data-testid="stTextInput"] label {
         text-align: right !important;
         width: 100% !important;
-        color: #ffffff !important;
-        font-weight: 700 !important;
-        font-size: 1.05rem !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 12px !important;
     }
 
     /* עיצוב אזורי החיפוש */
@@ -205,10 +210,20 @@ st.markdown("""
         background: rgba(11, 17, 30, 0.85);
         border: 1px solid rgba(255, 255, 255, 0.07);
         border-radius: 16px;
-        padding: 30px;
+        padding: 35px;
         margin-top: 20px;
         backdrop-filter: blur(10px);
         box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+    }
+
+    /* תיבת תוצאות יפה שנוצרת רק כשיש תוכן */
+    .result-box {
+        background-color: #0f172a; 
+        padding: 25px; 
+        border-radius: 12px; 
+        border: 1px solid #1e293b; 
+        margin-top: 25px;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -362,19 +377,24 @@ with tab3:
         run_analysis = st.button("🔍 נתח מניה", key="btn_analyze")
         st.markdown('</div></div>', unsafe_allow_html=True)
         
+        # אזור דינמי לתוצאות - מופיע רק לאחר הלחיצה ומבטל מלבנים ריקים מראש
+        analysis_container = st.container()
         if run_analysis:
-            if search_ticker:
-                with st.spinner("מושך נתונים..."):
-                    t = yf.download(search_ticker, period="6mo", auto_adjust=True)
-                    if not t.empty:
-                        t['RSI'] = calculate_rsi(t['Close'])
-                        last_row = t.iloc[-1]
-                        st.metric("מחיר נוכחי", f"${float(last_row['Close']):.2f}")
-                        st.metric("מדד RSI", f"{float(last_row['RSI']):.1f}")
-                    else:
-                        st.error("המניה לא נמצאה.")
-            else:
-                st.warning("אנא הזן סימול.")
+            with analysis_container:
+                if search_ticker:
+                    with st.spinner("מושך נתונים..."):
+                        t = yf.download(search_ticker, period="6mo", auto_adjust=True)
+                        if not t.empty:
+                            t['RSI'] = calculate_rsi(t['Close'])
+                            last_row = t.iloc[-1]
+                            st.markdown('<div class="result-box">', unsafe_allow_html=True)
+                            st.metric("מחיר נוכחי", f"${float(last_row['Close']):.2f}")
+                            st.metric("מדד RSI", f"{float(last_row['RSI']):.1f}")
+                            st.markdown('</div>', unsafe_allow_html=True)
+                        else:
+                            st.error("המניה לא נמצאה.")
+                else:
+                    st.warning("אנא הזן סימול.")
                 
     with col2:
         st.markdown('<div class="search-section">', unsafe_allow_html=True)
@@ -383,11 +403,14 @@ with tab3:
         run_ai = st.button("🧠 שאל את האנליסט", key="btn_ai")
         st.markdown('</div></div>', unsafe_allow_html=True)
         
+        # אזור דינמי לתשובת ה-AI - נוצר ומעוצב רק כשיש תשובה מוכנה
+        ai_container = st.container()
         if run_ai:
-            if user_q:
-                with st.spinner("ה-AI חושב ומנתח..."):
-                    answer = ask_gemini(user_q)
-                    st.markdown(f'<div style="background-color:#0f172a; padding:20px; border-radius:8px; border:1px solid #1e293b; margin-top:20px;">'
-                                f'<h4>📋 תשובת האנליסט:</h4><p>{answer}</p></div>', unsafe_allow_html=True)
-            else:
-                st.warning("אנא הקלד שאלה תחילה.")
+            with ai_container:
+                if user_q:
+                    with st.spinner("ה-AI חושב ומנתח..."):
+                        answer = ask_gemini(user_q)
+                        st.markdown(f'<div class="result-box">'
+                                    f'<h4>📋 תשובת האנליסט:</h4><p>{answer}</p></div>', unsafe_allow_html=True)
+                else:
+                    st.warning("אנא הקלד שאלה תחילה.")
