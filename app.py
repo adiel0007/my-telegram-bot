@@ -66,31 +66,40 @@ st.markdown("""
         direction: rtl !important;
     }
     
-    /* עיצוב והגדלת כרטיסיות (Tabs) */
+    /* עיצוב והגדלת כרטיסיות (Tabs) באופן קשיח */
     .stTabs [data-baseweb="tab-list"] {
         gap: 12px;
         justify-content: center !important;
         border-bottom: 1px solid rgba(30, 41, 59, 0.8);
         direction: rtl !important;
     }
+    
+    /* פילוח עמוק של כפתורי הלשוניות להגדלת הטקסט */
+    .stTabs [data-baseweb="tab"] p {
+        font-size: 1.3rem !important; /* הגדלת גודל הגופן של השם של הכרטיסיות */
+        font-weight: 800 !important;  /* הדגשה חזקה של הכותרת */
+    }
+    
     .stTabs [data-baseweb="tab"] {
         background-color: rgba(11, 15, 25, 0.85);
         border: 1px solid rgba(30, 41, 59, 0.5);
         border-radius: 6px 6px 0px 0px;
         padding: 12px 28px;
         color: #94a3b8;
-        font-weight: 700;
-        font-size: 1.2rem !important; /* הגדלת פונט השם של הכרטיסיות */
         backdrop-filter: blur(4px);
     }
+    
     .stTabs [aria-selected="true"] {
         background-color: #0f172a !important;
-        color: #ffbc00 !important;
         border-color: #ffbc00 !important;
         box-shadow: 0 -4px 12px rgba(255, 188, 0, 0.15);
     }
+    
+    .stTabs [aria-selected="true"] p {
+        color: #ffbc00 !important;
+    }
 
-    /* קונטיינר מרכזי נקי ללא מלבנים כפולים מיותרים */
+    /* קונטיינר מרכזי נקי */
     .cyber-box {
         direction: rtl !important;
         text-align: center !important;
@@ -168,22 +177,18 @@ st.markdown("""
         transform: translateY(-2px);
     }
 
-    /* תיקון צבע הפונט בתוך תיבות הקלט הלבנות - פונט שחור, גדול וברור */
-    div[data-testid="stTextInput"] {
-        direction: rtl !important;
-        text-align: right !important;
-    }
-    
+    /* תיקון קשיח וקבוע לצבע הפונט בתוך תיבות הקלט הלבנות - שחור תמיד, מודגש וגדול */
     div[data-testid="stTextInput"] input {
-        text-align: right !important;
-        direction: rtl !important;
-        background-color: #ffffff !important; /* שמירה על תיבה לבנה */
-        color: #000000 !important;           /* פונט שחור לחלוטין */
+        color: #000000 !important;           /* פונט שחור קבוע ויציב */
+        -webkit-text-fill-color: #000000 !important; /* הגנה נוספת לדפדפני מובייל/כרום */
         font-weight: 700 !important;          /* מודגש */
-        font-size: 1.1rem !important;         /* מוגדל */
+        font-size: 1.15rem !important;        /* מוגדל וקריא */
+        background-color: #ffffff !important; /* שמירה על תיבה לבנה נקייה */
         border: 2px solid #cbd5e1 !important;
         border-radius: 8px !important;
         padding: 12px !important;
+        direction: rtl !important;
+        text-align: right !important;
     }
     
     div[data-testid="stTextInput"] label {
