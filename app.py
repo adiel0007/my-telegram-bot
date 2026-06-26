@@ -170,15 +170,15 @@ def analyze_ticker(ticker):
         chg   = round(((last - prev) / prev) * 100, 2)
         up    = last > ma9
         return {
-            "ticker":   ticker,
-            "price":    f"${last:.2f}",
-            "chg":      f"+{chg}%" if chg >= 0 else f"{chg}%",
-            "up":       up,
-            "rsi":      f"{rsi:.1f} — {'קנייה יתר' if rsi>70 else ('מכירת יתר' if rsi<30 else 'נייטרלי')}",
-            "ma":       f"מעל MA9 (${ma9:.2f}) — חיובי" if up else f"מתחת MA9 (${ma9:.2f}) — שלילי",
-            "ma200":    f"${ma200:.2f}",
-            "options":  "Calls חזקים (63.4%)" if up else "Puts חזקים (58.7%)",
-            "rec":      "קנייה חזקה 🔥 (88%)" if up else "אחזקה (52%)",
+            "ticker":    ticker,
+            "price":     f"${last:.2f}",
+            "chg":       f"+{chg}%" if chg >= 0 else f"{chg}%",
+            "up":        up,
+            "rsi":       f"{rsi:.1f} — {'קנייה יתר' if rsi>70 else ('מכירת יתר' if rsi<30 else 'נייטרלי')}",
+            "ma":        f"מעל MA9 (${ma9:.2f}) — חיובי" if up else f"מתחת MA9 (${ma9:.2f}) — שלילי",
+            "ma200":     f"${ma200:.2f}",
+            "options":   "Calls חזקים (63.4%)" if up else "Puts חזקים (58.7%)",
+            "rec":       "קנייה חזקה 🔥 (88%)" if up else "אחזקה (52%)",
             "momentum": "עולה" if up else "יורד",
             "earnings": "עמדה ב-85% מהתחזיות",
         }
@@ -245,6 +245,48 @@ st.markdown("""
 div[data-testid="stHorizontalBlock"]{display:none!important}
 </style>
 """, unsafe_allow_html=True)
+
+
+# ── פונקציות עזר לרינדור תוצאות מ-Python ──────────────────────
+def render_cards(data, mode):
+    if data is None:
+        return '<div class="empty-msg">הפעל את הרדאר כדי לראות תוצאות</div>'
+    if len(data) == 0:
+        return '<div class="empty-msg">לא נמצאו מניות העונות לקריטריונים כרגע</div>'
+    cls   = "card-long"  if mode == "long"  else "card-short"
+    pcls  = "card-price-g" if mode == "long" else "card-price-r"
+    cards = "".join(
+        f'<div class="stock-card {cls}"><div class="card-sym">{s["symbol"]}</div>'
+        f'<div class="{pcls}">{s["price"]}</div><div class="card-chg">{s["chg"]}</div></div>'
+        for s in data
+    )
+    return f'<div class="card-grid">{cards}</div>'
+
+def render_analysis(d):
+    if not d:
+        return ''
+    tag_cls = "tag-green" if d["up"] else "tag-red"
+    return f"""
+    <div class="result-card">
+      <div class="result-card-header">
+        <span>{d['ticker']} &nbsp; {d['price']} <small style="color:var(--muted);font-size:0.7rem">{d['chg']}</small></span>
+        <span class="result-tag {tag_cls}">{d['momentum']}</span>
+      </div>
+      <div class="metric-row"><span class="metric-label">RSI (14)</span><span class="metric-value">{d['rsi']}</span></div>
+      <div class="metric-row"><span class="metric-label">ממוצעים נעים</span><span class="metric-value">{d['ma']}</span></div>
+      <div class="metric-row"><span class="metric-label">MA200</span><span class="metric-value">{d['ma200']}</span></div>
+      <div class="metric-row"><span class="metric-label">אופציות</span><span class="metric-value">{d['options']}</span></div>
+      <div class="metric-row"><span class="metric-label">עמידה בתחזיות</span><span class="metric-value">{d['earnings']}</span></div>
+      <div class="metric-row"><span class="metric-label">המלצת אנליסטים</span><span class="metric-value">{d['rec']}</span></div>
+    </div>
+    <div class="ai-response-box">
+      <div class="ai-response-label">סיכום טכני</div>
+      <div class="ai-response-text">
+        {d['ticker']} נסחרת ב-{d['price']} ({d['chg']}). {d['ma']}.
+        RSI: {d['rsi']}. אופציות: {d['options']}. {d['rec']}.
+      </div>
+    </div>"""
+
 
 # ═══════════════════════════════════════════════════════
 #  HTML
@@ -480,7 +522,6 @@ footer{{background:var(--bg2);border-top:1px solid var(--border);padding:36px 40
       <button class="tab-btn"        id="tbtn-ai"    onclick="switchTab('ai')">🤖 ניתוח AI</button>
     </div>
 
-    <!-- LONG -->
     <div class="tab-panel {'active' if active_tab=='long' else ''}" id="tab-long">
       <div class="radar-layout">
         <div class="panel-card">
@@ -506,7 +547,6 @@ footer{{background:var(--bg2);border-top:1px solid var(--border);padding:36px 40
       </div>
     </div>
 
-    <!-- SHORT -->
     <div class="tab-panel {'active' if active_tab=='short' else ''}" id="tab-short">
       <div class="radar-layout">
         <div class="panel-card">
@@ -532,7 +572,6 @@ footer{{background:var(--bg2);border-top:1px solid var(--border);padding:36px 40
       </div>
     </div>
 
-    <!-- AI -->
     <div class="tab-panel {'active' if active_tab=='ai' else ''}" id="tab-ai">
       <div class="ai-grid">
         <div class="panel-card">
@@ -618,7 +657,6 @@ function buildHero(){{
 
 // ── ניווט ──
 function goto(id){{
-  // גלילה בתוך ה-iframe
   document.getElementById(id).scrollIntoView({{behavior:'smooth'}});
 }}
 
@@ -632,13 +670,11 @@ function switchTab(n){{
 
 // ── טריגר סריקה — לוחץ על כפתור Streamlit הנסתר ──
 function triggerScan(mode){{
-  // מוצא את כפתור Streamlit הנסתר ולוחץ עליו
   const buttons = window.parent.document.querySelectorAll('button[kind="secondary"]');
   const label   = mode==='long' ? '__SCAN_LONG__' : '__SCAN_SHORT__';
   for(const btn of buttons){{
     if(btn.innerText.trim()===label){{ btn.click(); break; }}
   }}
-  // הצג הודעת המתנה
   document.getElementById('res-'+mode).innerHTML=
     '<div class="empty-msg">⏳ הסריקה רצה בחלון Streamlit מעל... ממתין לתוצאות</div>';
 }}
@@ -647,7 +683,6 @@ function triggerScan(mode){{
 function triggerAnalyze(){{
   const ticker = document.getElementById('ticker-input').value.trim().toUpperCase();
   if(!ticker) return;
-  // הכנס לשדה הנסתר ב-Streamlit ולחץ
   const inputs = window.parent.document.querySelectorAll('input[type="text"]');
   for(const inp of inputs){{
     const rect = inp.getBoundingClientRect();
@@ -687,59 +722,10 @@ function answerQ(){{
 document.getElementById('ticker-input').addEventListener('keydown',e=>{{if(e.key==='Enter')triggerAnalyze()}});
 document.getElementById('ai-q').addEventListener('keydown',e=>{{if(e.key==='Enter')answerQ()}});
 
-// ── אתחול ──
 buildTape(); buildHero();
-
-// ── טאב פעיל בטעינה ──
 switchTab('{active_tab}');
 </script>
 </body>
 </html>"""
-
-
-# ── פונקציות עזר לרינדור תוצאות מ-Python ──────────────────────
-def render_cards(data, mode):
-    if data is None:
-        return '<div class="empty-msg">הפעל את הרדאר כדי לראות תוצאות</div>'
-    if len(data) == 0:
-        return '<div class="empty-msg">לא נמצאו מניות העונות לקריטריונים כרגע</div>'
-    cls   = "card-long"  if mode == "long"  else "card-short"
-    pcls  = "card-price-g" if mode == "long" else "card-price-r"
-    cards = "".join(
-        f'<div class="stock-card {cls}"><div class="card-sym">{s["symbol"]}</div>'
-        f'<div class="{pcls}">{s["price"]}</div><div class="card-chg">{s["chg"]}</div></div>'
-        for s in data
-    )
-    return f'<div class="card-grid">{cards}</div>'
-
-def render_analysis(d):
-    if not d:
-        return ''
-    tag_cls = "tag-green" if d["up"] else "tag-red"
-    return f"""
-    <div class="result-card">
-      <div class="result-card-header">
-        <span>{d['ticker']} &nbsp; {d['price']} <small style="color:var(--muted);font-size:0.7rem">{d['chg']}</small></span>
-        <span class="result-tag {tag_cls}">{d['momentum']}</span>
-      </div>
-      <div class="metric-row"><span class="metric-label">RSI (14)</span><span class="metric-value">{d['rsi']}</span></div>
-      <div class="metric-row"><span class="metric-label">ממוצעים נעים</span><span class="metric-value">{d['ma']}</span></div>
-      <div class="metric-row"><span class="metric-label">MA200</span><span class="metric-value">{d['ma200']}</span></div>
-      <div class="metric-row"><span class="metric-label">אופציות</span><span class="metric-value">{d['options']}</span></div>
-      <div class="metric-row"><span class="metric-label">עמידה בתחזיות</span><span class="metric-value">{d['earnings']}</span></div>
-      <div class="metric-row"><span class="metric-label">המלצת אנליסטים</span><span class="metric-value">{d['rec']}</span></div>
-    </div>
-    <div class="ai-response-box">
-      <div class="ai-response-label">סיכום טכני</div>
-      <div class="ai-response-text">
-        {d['ticker']} נסחרת ב-{d['price']} ({d['chg']}). {d['ma']}.
-        RSI: {d['rsi']}. אופציות: {d['options']}. {d['rec']}.
-      </div>
-    </div>"""
-
-
-# ── חשוב: render_cards ו-render_analysis חייבים להיות לפני html ──
-# העבר אותם למעלה לפני השורה html = f"""..."""
-# (הקוד כאן כבר בסדר הנכון)
 
 st.components.v1.html(html, height=900, scrolling=True)
