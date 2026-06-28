@@ -212,7 +212,11 @@ def do_scan(mode):
                 df = t.history(period="1y", interval="1d", auto_adjust=True, actions=False)
             if df.empty or len(df) < 200:
                 continue
-            df    = df.dropna(subset=["Close", "Open"])
+            
+            # תוקן: מסננים שורות ריקות לחלוטין ושורות פנטום ללא מחזור מסחר אמיתי
+            df = df.dropna(subset=["Close", "Open", "Volume"])
+            df = df[df["Volume"] > 1000]
+            
             close = df["Close"]
             open_ = df["Open"]
             
@@ -222,7 +226,7 @@ def do_scan(mode):
             
             ma9_series = close.rolling(9).mean()
             ma9   = float(ma9_series.iloc[-1])
-            ma9_prev = float(ma9_series.iloc[-2])
+            ma9_prev = float(ma9_series.iloc[-2]) # ערך הממוצע ביום הקודם
             
             ma100 = float(close.rolling(100).mean().iloc[-1])
             ma200 = float(close.rolling(200).mean().iloc[-1])
@@ -230,7 +234,9 @@ def do_scan(mode):
             chg   = round(((last - prev) / prev) * 100, 2)
             
             if mode == "long":
-                if (last > ma9 and rsi < 70 and vol > 1_000_000
+                # תוקן: מחייב שגם היום וגם אתמול יהיו מעל ממוצע 9 המתואם והאמיתי
+                if (last > ma9 and prev > ma9_prev
+                        and rsi < 70 and vol > 1_000_000
                         and not (last > ma9 and last > ma100 and last > ma200)
                         and not (last < ma9 and last < ma100 and last < ma200)
                         and float(close.iloc[-1]) > float(open_.iloc[-1])
@@ -258,12 +264,16 @@ def do_scan(mode):
 
 def analyze_ticker(ticker):
     try:
-        session = get_session() # תוקן: שימוש באותו Session בדיוק כדי לסנכרן דאטה ולמנוע הבדלי שרתים וחסימות
+        session = get_session()
         t     = yf.Ticker(ticker, session=session)
         df    = t.history(period="1y", interval="1d", auto_adjust=True, actions=False)
         if df.empty:
             return None
-        df    = df.dropna(subset=["Close", "Open"])
+        
+        # תוקן: סינון שורות פנטום גם במערכת הניתוח הבודד לסנכרון מלא
+        df = df.dropna(subset=["Close", "Open", "Volume"])
+        df = df[df["Volume"] > 1000]
+        
         close = df["Close"]
         last  = float(close.iloc[-1])
         prev  = float(close.iloc[-2])
@@ -491,7 +501,6 @@ tab_long, tab_short, tab_ai = st.tabs(["📈 רדאר לונג", "📉 רדאר 
 with tab_long:
     col1, col2 = st.columns([1, 2])
     with col1:
-        # תוקן: קריטריונים פשוטים, קצרים ומעורפלים לחלוטין כדי שלא יעתיקו את האלגוריתם
         st.markdown("""
 <div class="panel-card" style="margin-top:15px; border-bottom-left-radius:0; border-bottom-right-radius:0;">
   <div class="panel-title">רדאר לונג</div>
@@ -525,7 +534,6 @@ with tab_long:
 with tab_short:
     col1, col2 = st.columns([1, 2])
     with col1:
-        # תוקן: קריטריונים פשוטים, קצרים ומעורפלים לחלוטין כדי שלא יעתיקו את האלגוריתם
         st.markdown("""
 <div class="panel-card" style="margin-top:15px; border-bottom-left-radius:0; border-bottom-right-radius:0;">
   <div class="panel-title">רדאר שורט</div>
