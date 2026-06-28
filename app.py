@@ -125,7 +125,6 @@ div[data-testid="stTextInput"] input:focus {{
 </style>
 """, unsafe_allow_html=True)
 
-# ── פונקציות לוגיקה וסריקה ──
 def get_session():
     agents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -214,20 +213,27 @@ def do_scan(mode):
         try:
             t = yf.Ticker(ticker, session=session)
             with open(os.devnull, 'w') as dn, contextlib.redirect_stderr(dn):
-                df = t.history(period="1y", interval="1d", auto_adjust=False, actions=False)
+                # שונה ל-auto_adjust=True כדי ליצור סנכרון מלא והרמוני עם מנוע ה-AI והמדדים
+                df = t.history(period="1y", interval="1d", auto_adjust=True, actions=False)
             if df.empty or len(df) < 200:
                 continue
             df    = df.dropna(subset=["Close", "Open"])
             close = df["Close"]
             open_ = df["Open"]
+            
             last  = float(close.iloc[-1])
             prev  = float(close.iloc[-2])
             rsi   = calculate_rsi(close)
-            ma9   = float(close.rolling(9).mean().iloc[-1])
+            
+            ma9_series = close.rolling(9).mean()
+            ma9   = float(ma9_series.iloc[-1])
+            ma9_prev = float(ma9_series.iloc[-2]) # הערך של ממוצע 9 ביום הקודם
+            
             ma100 = float(close.rolling(100).mean().iloc[-1])
             ma200 = float(close.rolling(200).mean().iloc[-1])
             vol   = int(df["Volume"].iloc[-1]) if "Volume" in df.columns else 0
             chg   = round(((last - prev) / prev) * 100, 2)
+            
             if mode == "long":
                 if (last > ma9 and rsi < 70 and vol > 1_000_000
                         and not (last > ma9 and last > ma100 and last > ma200)
@@ -237,10 +243,18 @@ def do_scan(mode):
                         and last > prev):
                     results.append({"symbol": ticker, "price": f"${last:.2f}", "chg": f"+{chg}%", "up": True})
             else:
-                if (last < ma9 and rsi > 30 and vol > 1_000_000
+                # חוק סינון חדש: בודק האם ב-5 ימי המסחר האחרונים כל הימים נסגרו אדומים
+                is_5_days_red = all(float(close.iloc[-j]) < float(open_.iloc[-j]) for j in range(1, 6))
+                
+                # סינון שורט משופר ומחמיר:
+                # 1. המחיר ביום האחרון וביום שלפניו חייב להיות קטן באופן מוחלט מ-MA9 (לא מעליו ולא עליו)
+                # 2. המניה לא הייתה אדומה 5 ימים ברצף (מונע כניסה באיחור)
+                if (last < ma9 and prev < ma9_prev 
+                        and rsi > 30 and vol > 1_000_000
                         and float(close.iloc[-1]) < float(open_.iloc[-1])
                         and float(close.iloc[-2]) < float(open_.iloc[-2])
-                        and last < prev):
+                        and last < prev
+                        and not is_5_days_red):
                     seed = sum(ord(c) for c in ticker)
                     random.seed(seed)
                     if random.random() > 0.45:
@@ -475,7 +489,7 @@ buildTape(); buildHero();
 
 st.components.v1.html(top_html, height=590, scrolling=False)
 
-# ── 2. רכיב הרדאר המרכזי - נייטיב לחלוטין ללא קופסאות טקסט שבורות ──
+# ── 2. רכיב הרדאר המרכזי ──
 st.markdown('<div style="padding: 40px 40px 10px 40px; max-width: 1200px; margin: 0 auto;">', unsafe_allow_html=True)
 st.markdown('<p style="color:#c9a84c; font-size:0.68rem; font-weight:600; letter-spacing:0.16em; margin-bottom:5px; text-transform:uppercase; direction:rtl; text-align:right;">LIVE RADAR</p>', unsafe_allow_html=True)
 st.markdown('<h2 style="font-family:\'Playfair Display\',serif; font-size:2rem; font-weight:900; color:#f0ede6; margin:0 0 5px 0; direction:rtl; text-align:right;">רדאר המניות</h2>', unsafe_allow_html=True)
@@ -487,7 +501,6 @@ tab_long, tab_short, tab_ai = st.tabs(["📈 רדאר לונג", "📉 רדאר 
 with tab_long:
     col1, col2 = st.columns([1, 2])
     with col1:
-        # פה הקוד נכתב צמוד לשמאל כדי למנוע את בעיית ה-Markdown
         st.markdown("""
 <div class="panel-card" style="margin-top:15px; border-bottom-left-radius:0; border-bottom-right-radius:0;">
   <div class="panel-title">רדאר לונג</div>
@@ -527,12 +540,13 @@ with tab_short:
   <div class="panel-title">רדאר שורט</div>
   <div class="panel-sub">מניות עם מומנטום יורד</div>
   <ul class="criteria-list">
-    <li><div class="crit-dot dot-red"></div>מחיר מתחת MA9</li>
+    <li><div class="crit-dot dot-red"></div>מחיר מוחלט מתחת MA9 (בימים האחרונים)</li>
     <li><div class="crit-dot dot-red"></div>RSI מעל 30</li>
     <li><div class="crit-dot dot-red"></div>נפח מעל מיליון</li>
     <li><div class="crit-dot dot-red"></div>יומיים אדומים רצופים</li>
     <li><div class="crit-dot dot-red"></div>סגירה נמוכה מאתמול</li>
     <li><div class="crit-dot dot-red"></div>Puts חזקים מ-Calls</li>
+    <li><div class="crit-dot dot-red"></div>סינון: ללא מניות שצנחו 5 ימים ברצף ❌</li>
   </ul>
 </div>""", unsafe_allow_html=True)
         st.markdown('<div class="short-btn">', unsafe_allow_html=True)
@@ -663,7 +677,7 @@ footer{background:#0f0f0c;border-top:1px solid rgba(201,168,76,0.12);padding:36p
     <div class="steps-grid">
       <div class="step-card"><div class="step-num">01</div><div class="step-title">בחר מצב סריקה</div><div class="step-desc">לונג, שורט, או ניתוח מניה בודדת. המערכת אוספת נתונים בזמן אמת.</div></div>
       <div class="step-card"><div class="step-num">02</div><div class="step-title">סריקה אלגוריתמית</div><div class="step-desc">האלגוריתם בודק RSI, ממוצעים נעים, נפח מסחר ונרות עבור כל מניה.</div></div>
-      <div class="step-card"><div class="step-num">03</div><div class="step-title">קבל תוצאות אמיתיות</div><div class="step-desc">מניות שעוברות את הקריטריונים מוצגות עם מחיר ואחוז שינוי עדכניים.</div></div>
+      <div class="step-card"><div class="step-num">03</div><div class="step-title">קבל תוצאות אמיתיות</div><div class="step-desc">מניות שעוברות את הקריטריונים מוצגות礼 מחיר ואחוז שינוי עדכניים.</div></div>
     </div>
   </div>
 </section>
