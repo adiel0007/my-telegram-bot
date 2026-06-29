@@ -7,8 +7,9 @@ import requests
 import os
 import contextlib
 
-# הוספת תמיכה ב-Gemini API לשאלות חופשיות
-GEMINI_API_KEY = "AQ.Ab8RN6IXPR-4I1jtU1h79sHrYDu9WAk9qIbsuuhtQNSlkA74WA" # השם כאן את מפתח ה-API שלך כדי לקבל תשובות AI חכמות
+# הוספת תמיכה ב-Gemini API לשאלות חופשיות - המפתח שלך הוזן כאן
+GEMINI_API_KEY = "AQ.Ab8RN6IXPR-4I1jtU1h79sHrYDu9WAk9qIbsuuhtQNSlkA74WA" 
+
 try:
     import google.generativeai as genai
     GENAI_AVAILABLE = True
@@ -128,6 +129,7 @@ div[data-testid="stTextInput"] input {{
 def get_session():
     agents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Safari/605.1.15',
     ]
     s = requests.Session()
     s.headers.update({'User-Agent': random.choice(agents)})
@@ -282,13 +284,18 @@ def do_scan(mode):
 
 def analyze_ticker(ticker):
     try:
-        # הסרנו את ה-session כדי למנוע שגיאות 403 Forbidden במשיכה ישירה
-        t = yf.Ticker(ticker)
+        # פתרון החסימות: ניסיון ראשון עם Session מותאם כדי לעקוף חסימות שרת
+        session = get_session()
+        t = yf.Ticker(ticker, session=session)
         df = t.history(period="1y", interval="1d", auto_adjust=True)
             
+        # גיבוי: ניסיון שני ללא Session או עם טווח מקסימלי במקרה של חסימה
         if df.empty or len(df) < 20:
-            df = t.history(period="max", interval="1d", auto_adjust=True)
-            
+            t_fallback = yf.Ticker(ticker)
+            df = t_fallback.history(period="1y", interval="1d", auto_adjust=True)
+            if df.empty or len(df) < 20:
+                df = t_fallback.history(period="max", interval="1d", auto_adjust=True)
+                
         if df.empty or len(df) < 20:
             return None
             
@@ -325,12 +332,15 @@ def analyze_ticker(ticker):
         else:
             ma_status, ma_pos = "ניטרלי", None
 
-        # עטיפת משיכת ה-info ב-try/except כדי למנוע קריסה מלאה של המערכת בגלל שגיאות שרת ב-Yahoo
+        # עטיפת משיכת ה-info כדי למנוע קריסה
         info = {}
         try:
             info = t.info if t.info else {}
         except Exception:
-            pass
+            try:
+                info = t_fallback.info if t_fallback.info else {}
+            except Exception:
+                pass
         
         calls_ratio = round(50 + (rsi - 50) * 0.5 + random.uniform(-2, 2), 1)
         calls_ratio = max(10.0, min(95.0, calls_ratio))
@@ -771,8 +781,9 @@ with tab_ai:
         
         if st.button("נתח מניה", key="analyze_trigger"):
             if ticker_val:
-                with st.spinner("מחלץ נתוני שוק חיים מהאינטרנט..."):
-                    res = analyze_ticker(ticker_val.upper().strip())
+                ticker_clean = ticker_val.upper().strip()
+                with st.spinner(f"מחלץ נתוני שוק חיים עבור {ticker_clean}..."):
+                    res = analyze_ticker(ticker_clean)
                     if res:
                         st.session_state.analysis = res
                     else:
@@ -807,7 +818,7 @@ with tab_ai:
                             response = model.generate_content(prompt)
                             st.session_state.ai_answer = response.text
                         except Exception as e:
-                            st.session_state.ai_answer = f"<b>שגיאה בתקשורת עם Gemini:</b> {str(e)}<br/>אנא ודא שמפתח ה-API שלך תקין."
+                            st.session_state.ai_answer = f"<b>שגיאה בתקשורת עם Gemini:</b> {str(e)}<br/>אנא ודא שמפתח ה-API שלך תקין ומוגדר נכון."
                 
                 else:
                     # גיבוי (Fallback) למקרה שאין מפתח API מוזן במערכת
@@ -829,7 +840,7 @@ with tab_ai:
                     else:
                         st.session_state.ai_answer = (
                             f"<b>שים לב: כדי שהמערכת תענה בחופשיות על שאלות מורכבות כמו '{q}' בזמן אמת, יש להזין מפתח GEMINI_API_KEY בקוד של האפליקציה (שורה 12).</b><br/><br/>"
-                            "עד שיוזן מפתח API, המערכת מספקת תשובות בסיסיות מוגדרות מראש. נסה לשאול על: RSI, ממוצעים נעים, נרות יפניים, מחזור, או שורט."
+                            "עד שיוזן מפתח API תקין, המערכת מספקת תשובות בסיסיות מוגדרות מראש. נסה לשאול על: RSI, ממוצעים נעים, נרות יפניים, מחזור, או שורט."
                         )
                     
         st.markdown('</div>', unsafe_allow_html=True)
