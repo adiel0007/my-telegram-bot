@@ -99,7 +99,6 @@ div[data-testid="stTabs"] button[aria-selected="true"] {{
     border-bottom-color: #c9a84c !important;
 }}
 
-/* עיצוב מעודכן לכל הכפתורים - טקסט שחור ובולט */
 div.stButton > button {{
     width: 100% !important;
     padding: 11px !important;
@@ -265,7 +264,6 @@ def _fetch_options_sentiment_raw(ticker_symbol):
 
     raise RuntimeError(f"לא ניתן היה לקבל תשובה מיאהו עבור אופציות {ticker_symbol}")
 
-
 @st.cache_data(ttl=900, show_spinner=False)
 def _fetch_options_sentiment_cached(ticker_symbol):
     return _fetch_options_sentiment_raw(ticker_symbol)
@@ -378,13 +376,15 @@ def do_scan(mode):
     progress = st.progress(0)
     status   = st.empty()
     total    = len(tickers)
+    
     for i, ticker in enumerate(tickers):
         status.markdown(f"<div style='color:#c9a84c;font-size:0.85rem;text-align:center;margin-bottom:10px;'>🔍 סורק {ticker}... ({i+1}/{total})</div>", unsafe_allow_html=True)
         progress.progress(int((i + 1) / total * 100))
         try:
             t = yf.Ticker(ticker, session=session)
             with open(os.devnull, 'w') as dn, contextlib.redirect_stderr(dn):
-                df = t.history(period="max", interval="1d", auto_adjust=True, actions=False)
+                # שינוי משמעותי: לא מבקשים "max" שגורם לחסימות מהירות ביאהו, מספיק 5 שנים בשביל ATH
+                df = t.history(period="5y", interval="1d", auto_adjust=True, actions=False)
             
             if df.empty or len(df) < 30:
                 continue
@@ -405,7 +405,12 @@ def do_scan(mode):
             
             ma100 = float(close.rolling(100).mean().bfill().fillna(last).iloc[-1])
             ma200 = float(close.rolling(200).mean().bfill().fillna(last).iloc[-1])
-            vol   = int(df["Volume"].iloc[-1]) if "Volume" in df.columns else 0
+            
+            # בדיקת מחזור חכמה - מונעת נפילות בתחילת יום כשהמחזור עוד קטן
+            vol_today = int(df["Volume"].iloc[-1]) if "Volume" in df.columns else 0
+            vol_yest = int(df["Volume"].iloc[-2]) if "Volume" in df.columns and len(df) > 1 else 0
+            vol = max(vol_today, vol_yest) 
+            
             chg   = round(((last - prev) / prev) * 100, 2)
             
             open_1, close_1, high_1, low_1 = float(df["Open"].iloc[-1]), float(df["Close"].iloc[-1]), float(df["High"].iloc[-1]), float(df["Low"].iloc[-1])
@@ -450,14 +455,11 @@ def do_scan(mode):
                     results.append({"symbol": ticker, "price": f"${last:.2f}", "chg": f"+{chg}%" if chg > 0 else f"{chg}%", "up": True, "strict_hammer": recent_hammer_strict})
             else:
                 three_consecutive_down = (close_1 < close_2) and (close_2 < close_3_val)
-                
                 yesterday_red_star = is_shooting_star_yesterday and (close_2 < open_2)
                 today_red_lower = (close_1 < open_1) and (close_1 < close_2)
                 star_condition = yesterday_red_star and today_red_lower
-                
                 short_pattern = three_consecutive_down or star_condition
 
-                # חוק ה-ATH הוסר מסורק השורט. נשארו שאר התנאים.
                 if (rsi > 30 and vol > 300_000 and short_pattern):
                     results.append({"symbol": ticker, "price": f"${last:.2f}", "chg": f"{chg}%", "up": False})
         except:
@@ -670,7 +672,6 @@ def _fetch_fundamentals_raw(ticker_symbol):
         return merged
 
     raise RuntimeError(f"לא ניתן היה למשוך נתוני יסוד עבור {ticker_symbol} אחרי כל הניסיונות")
-
 
 @st.cache_data(ttl=600, show_spinner=False)
 def _fetch_fundamentals_cached(ticker_symbol):
